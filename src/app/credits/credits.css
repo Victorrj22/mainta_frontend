@@ -1,0 +1,133 @@
+.credits-container {
+  padding: 120px 24px 60px;
+  background-color: var(--surface-color);
+  min-height: 100vh;
+}
+
+.credits-header {
+  text-align: center;
+  margin-bottom: 60px;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.credits-header h1 {
+  font-size: 3rem;
+  color: var(--secondary-color);
+}
+
+.credits-header p {
+  font-size: 1.25rem;
+  color: var(--text-muted);
+}
+
+.packages-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 32px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.package-card {
+  background: white;
+  border-radius: var(--radius-xl);
+  padding: 40px;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+  transition: var(--transition);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.package-card:hover {
+  transform: translateY(-8px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--primary-color);
+}
+
+.package-card.popular {
+  border-color: var(--primary-color);
+  box-shadow: var(--shadow-md);
+  transform: scale(1.05);
+  z-index: 2;
+}
+
+.package-card.popular:hover {
+  transform: scale(1.05) translateY(-8px);
+}
+
+.popular-badge {
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--primary-color);
+  color: white;
+  padding: 6px 16px;
+  border-radius: 100px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.package-icon {
+  font-size: 4rem;
+  margin-bottom: 24px;
+}
+
+.package-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.package-price {
+  font-size: 3rem;
+  font-weight: 800;
+  color: var(--secondary-color);
+  margin-bottom: 8px;
+}
+
+.package-price span {
+  font-size: 1.25rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.package-credits {
+  font-size: 1.1rem;
+  color: var(--primary-color);
+  font-weight: 600;
+  margin-bottom: 32px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.package-features {
+  list-style: none;
+  text-align: left;
+  margin-bottom: 40px;
+  flex: 1;
+}
+
+.package-features li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  color: var(--text-muted);
+}
+
+.feature-check {
+  color: #10b981;
+  font-weight: bold;
+}
+
+.buy-btn {
+  width: 100%;
+}
