@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import "../book.css";
 
@@ -11,20 +11,111 @@ export default function BookMaintenance() {
     description: "",
     address: "",
     date: "",
+    time: "",
+    contactPhone: "",
   });
 
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  useEffect(() => {
+    const userStr = localStorage.getItem("mainta_user");
+    if (userStr) {
+      const userObj = JSON.parse(userStr);
+      fetch(`http://localhost:5175/api/users/${userObj.id}`)
+        .then(res => res.json())
+        .then(data => {
+          setUser(data);
+          const defaultAddr = data.addresses?.find((a: any) => a.isDefault);
+          setBookingData(prev => ({
+            ...prev,
+            contactPhone: prev.contactPhone || data.phone || "",
+            address: prev.address || (defaultAddr ? `${defaultAddr.street}, ${defaultAddr.city}, ${defaultAddr.state} ${defaultAddr.zipCode}` : ""),
+            addressId: (prev as any).addressId || (defaultAddr ? defaultAddr.id : (data.addresses?.length > 0 ? data.addresses[0].id : undefined))
+          }));
+        })
+        .catch(err => console.error("Failed to load user", err));
+    }
+  }, []);
 
   const handleNext = () => setStep(step + 1);
   const handlePrev = () => setStep(step - 1);
 
-  const handleBook = () => {
+  const getCaliforniaDateString = () => {
+    return new Intl.DateTimeFormat('en-CA', { 
+      timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' 
+    }).format(new Date());
+  };
+  
+  const getCaliforniaTimeString = () => {
+    return new Intl.DateTimeFormat('en-GB', { 
+      timeZone: 'America/Los_Angeles', hour: '2-digit', minute: '2-digit', hour12: false 
+    }).format(new Date());
+  };
+
+  const minDateStr = getCaliforniaDateString();
+  const minTimeStr = bookingData.date === minDateStr ? getCaliforniaTimeString() : "";
+
+  const handleBook = async () => {
+    if (!user) return;
+    
+    if (!bookingData.address || bookingData.address.trim() === "") {
+      setErrorMsg("Please provide a valid address (return to the previous step).");
+      return;
+    }
+    if (!bookingData.contactPhone || bookingData.contactPhone.trim() === "") {
+      setErrorMsg("Please provide a contact phone number.");
+      return;
+    }
+    if (!bookingData.date || !bookingData.time) {
+      setErrorMsg("Please select a date and time.");
+      return;
+    }
+    const currentCaDate = getCaliforniaDateString();
+    if (bookingData.date < currentCaDate) {
+      setErrorMsg("The selected date cannot be in the past (California Time).");
+      return;
+    }
+    if (bookingData.date === currentCaDate && bookingData.time < getCaliforniaTimeString()) {
+      setErrorMsg("The selected time cannot be in the past (California Time).");
+      return;
+    }
+    if (user.creditBalance < 1) {
+      setErrorMsg(`Insufficient balance: You have ${user.creditBalance} Credits, but 1 Credit is required to request a quote.`);
+      return;
+    }
+
     setLoading(true);
-    setTimeout(() => {
+    setErrorMsg("");
+
+    const bookingPayload = {
+      userId: user.id,
+      addressId: (bookingData as any).addressId || "00000000-0000-0000-0000-000000000000",
+      serviceId: "00000000-0000-0000-0000-000000000000",
+      detailsJson: JSON.stringify(bookingData),
+      scheduledDate: new Date(`${bookingData.date}T${bookingData.time}`).toISOString(),
+      totalPrice: 1
+    };
+
+    try {
+      const res = await fetch("http://localhost:5175/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(bookingPayload)
+      });
+      if (res.ok) {
+        setSuccess(true);
+      } else {
+        const text = await res.text();
+        setErrorMsg(text || "Error creating request.");
+      }
+    } catch (err) {
+      setErrorMsg("Connection error.");
+    } finally {
       setLoading(false);
-      setSuccess(true);
-    }, 2000);
+    }
   };
 
   if (success) {
@@ -112,13 +203,37 @@ export default function BookMaintenance() {
             {step === 3 && (
               <div className="step-content">
                 <h2>Choose a Date & Time</h2>
+                <div className="grid-2">
+                  <div className="input-box">
+                    <label>Preferred Date</label>
+                    <input 
+                      type="date" 
+                      className="modern-input"
+                      value={bookingData.date}
+                      min={minDateStr}
+                      onChange={e => setBookingData({...bookingData, date: e.target.value})}
+                    />
+                  </div>
+                  <div className="input-box">
+                    <label>Preferred Time</label>
+                    <input 
+                      type="time" 
+                      className="modern-input"
+                      value={bookingData.time}
+                      min={minTimeStr}
+                      onChange={e => setBookingData({...bookingData, time: e.target.value})}
+                    />
+                  </div>
+                </div>
+
                 <div className="input-box">
-                  <label>Preferred Date</label>
+                  <label>Contact Phone</label>
                   <input 
-                    type="date" 
+                    type="tel" 
                     className="modern-input"
-                    value={bookingData.date}
-                    onChange={e => setBookingData({...bookingData, date: e.target.value})}
+                    placeholder="(555) 555-5555"
+                    value={bookingData.contactPhone}
+                    onChange={e => setBookingData({...bookingData, contactPhone: e.target.value})}
                   />
                 </div>
                 
@@ -131,10 +246,12 @@ export default function BookMaintenance() {
                     <span>Pre-Authorization</span>
                     <span>1 Credit</span>
                   </div>
-                  <p className="balance-info">Your current balance: <strong>10 Credits</strong></p>
+                  <p className="balance-info">Your current balance: <strong>{user ? user.creditBalance : "..."} Credits</strong></p>
                 </div>
 
-                <div className="btn-row">
+                {errorMsg && <div style={{ color: 'red', marginTop: '12px', textAlign: 'center', fontWeight: 'bold' }}>{errorMsg}</div>}
+
+                <div className="btn-row" style={{ marginTop: '16px' }}>
                   <button className="btn-secondary" onClick={handlePrev}>Back</button>
                   <button className="btn-primary w-full" onClick={handleBook} disabled={loading}>
                     {loading ? "Submitting..." : "Submit Request"}

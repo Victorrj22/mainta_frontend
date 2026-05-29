@@ -136,6 +136,24 @@ export default function ProfilePage() {
     }
   };
 
+  const handleSetDefaultAddress = async (addressId: string) => {
+    try {
+      const res = await fetch(`http://localhost:5175/api/addresses/${addressId}/default`, {
+        method: "PUT"
+      });
+      if (res.ok) {
+        setAddresses(addresses.map(a => ({
+          ...a,
+          isDefault: a.id === addressId
+        })));
+      } else {
+        alert("Failed to set default address.");
+      }
+    } catch(err) {
+      alert("Error setting default address.");
+    }
+  };
+
   return (
     <div className="profile-container">
       <div className="profile-layout">
@@ -255,9 +273,20 @@ export default function ProfilePage() {
               </div>
             ) : (
               addresses.map((addr) => (
-                <div key={addr.id} className="address-item">
-                  <div className="address-street">{addr.street} {addr.isDefault && <span style={{ fontSize: '0.75rem', background: 'var(--primary-color)', color: 'white', padding: '2px 8px', borderRadius: '10px', marginLeft: '8px' }}>Default</span>}</div>
-                  <div className="address-details">{addr.city}, {addr.state} {addr.zipCode}</div>
+                <div key={addr.id} className="address-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div className="address-street">{addr.street} {addr.isDefault && <span style={{ fontSize: '0.75rem', background: 'var(--primary-color)', color: 'white', padding: '2px 8px', borderRadius: '10px', marginLeft: '8px' }}>Default</span>}</div>
+                    <div className="address-details">{addr.city}, {addr.state} {addr.zipCode}</div>
+                  </div>
+                  {!addr.isDefault && (
+                    <button 
+                      onClick={() => handleSetDefaultAddress(addr.id)}
+                      className="btn-secondary"
+                      style={{ padding: '4px 8px', fontSize: '0.8rem' }}
+                    >
+                      Set Default
+                    </button>
+                  )}
                 </div>
               ))
             )}
