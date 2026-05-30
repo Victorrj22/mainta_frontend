@@ -54,7 +54,7 @@ export default function ProfilePage() {
 
     const fetchProfileData = async () => {
       try {
-        const res = await fetch(`http://localhost:5175/api/users/${userObj.id}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/${userObj.id}`);
         if (res.ok) {
           const data = await res.json();
           setFormData({
@@ -79,7 +79,7 @@ export default function ProfilePage() {
     e.preventDefault();
     setSaving(true);
     try {
-      const res = await fetch(`http://localhost:5175/api/users/${userId}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/${userId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData)
@@ -111,7 +111,7 @@ export default function ProfilePage() {
     e.preventDefault();
     setAddingAddress(true);
     try {
-      const res = await fetch(`http://localhost:5175/api/addresses`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/addresses`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -138,7 +138,7 @@ export default function ProfilePage() {
 
   const handleSetDefaultAddress = async (addressId: string) => {
     try {
-      const res = await fetch(`http://localhost:5175/api/addresses/${addressId}/default`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/addresses/${addressId}/default`, {
         method: "PUT"
       });
       if (res.ok) {

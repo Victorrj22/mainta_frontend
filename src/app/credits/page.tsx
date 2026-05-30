@@ -27,7 +27,7 @@ function CreditsContent() {
       if (userStr) {
         const userObj = JSON.parse(userStr);
         // Sync balance from DB after Stripe success
-        fetch(`http://localhost:5175/api/users/${userObj.id}`)
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/${userObj.id}`)
           .then(res => res.json())
           .then(data => {
             userObj.creditBalance = data.creditBalance;
@@ -56,7 +56,7 @@ function CreditsContent() {
     const userObj = JSON.parse(userStr);
 
     try {
-      const res = await fetch("http://localhost:5175/api/payments/create-checkout-session", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/payments/create-checkout-session`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: userObj.id, amount })

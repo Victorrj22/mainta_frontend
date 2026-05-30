@@ -48,7 +48,7 @@ export default function BookCleaning() {
     const userStr = localStorage.getItem("mainta_user");
     if (userStr) {
       const userObj = JSON.parse(userStr);
-      fetch(`http://localhost:5175/api/users/${userObj.id}`)
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/${userObj.id}`)
         .then(res => res.json())
         .then(data => {
           setUser(data);
@@ -128,7 +128,7 @@ export default function BookCleaning() {
     };
 
     try {
-      const res = await fetch("http://localhost:5175/api/bookings", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/bookings`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(bookingPayload)
