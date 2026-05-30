@@ -2,21 +2,38 @@
 
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import "../book.css";
+import { 
+  calculateTotalCost, 
+  DIRT_LEVELS, 
+  SQ_FT_RANGES, 
+  BookingDetails, 
+  ADDON_PRICES 
+} from "../../utils/pricing";
+
+const MapSearch = dynamic(() => import("../../components/MapSearch"), { ssr: false });
 
 export default function BookCleaning() {
+  const router = useRouter();
   const [step, setStep] = useState(1);
-  const [bookingData, setBookingData] = useState({
-    serviceType: "Building Cleaning",
-    sidewalk: 0,
-    lobby: 0,
+  const [bookingData, setBookingData] = useState<BookingDetails & { address: string, addressId: string, date: string, time: string, contactPhone: string }>({
+    serviceType: "Deep Cleaning",
+    dirtLevel: "Well Maintained",
+    sqFtRangeIndex: 0,
+    bedrooms: 0,
+    fullBathrooms: 0,
+    halfBathrooms: 0,
+    kitchens: 0,
     hallways: 0,
-    bathrooms: 0,
-    internalStaircase: 0,
-    externalStaircase: 0,
+    sidewalk: 0,
+    staircases: 0,
+    lobby: 0,
     laundryRoom: 0,
-    dirtLevel: "Standard",
+    externalStaircase: 0,
     address: "",
+    addressId: "",
     date: "",
     time: "",
     contactPhone: "",
@@ -40,30 +57,15 @@ export default function BookCleaning() {
             ...prev,
             contactPhone: prev.contactPhone || data.phone || "",
             address: prev.address || (defaultAddr ? `${defaultAddr.street}, ${defaultAddr.city}, ${defaultAddr.state} ${defaultAddr.zipCode}` : ""),
-            addressId: (prev as any).addressId || (defaultAddr ? defaultAddr.id : (data.addresses?.length > 0 ? data.addresses[0].id : undefined))
+            addressId: prev.addressId || (defaultAddr ? defaultAddr.id : (data.addresses?.length > 0 ? data.addresses[0].id : ""))
           }));
         })
         .catch(err => console.error("Failed to load user", err));
     }
   }, []);
 
-  // Calculate dynamic credits based on quantity selected
   const totalCredits = useMemo(() => {
-    let total = 0;
-    // Base cost for service type
-    total += 1; 
-    // Add units
-    total += bookingData.sidewalk;
-    total += bookingData.lobby;
-    total += bookingData.hallways;
-    total += bookingData.bathrooms;
-    total += bookingData.internalStaircase;
-    total += bookingData.externalStaircase;
-    total += bookingData.laundryRoom;
-    // Multiplier for dirt level
-    if (bookingData.dirtLevel === "Deep Clean") total += 2;
-    if (bookingData.dirtLevel === "Post-Construction") total += 5;
-    return total > 0 ? total : 1;
+    return calculateTotalCost(bookingData);
   }, [bookingData]);
 
   const handleNext = () => setStep(step + 1);
@@ -118,7 +120,7 @@ export default function BookCleaning() {
 
     const bookingPayload = {
       userId: user.id,
-      addressId: (bookingData as any).addressId || "00000000-0000-0000-0000-000000000000",
+      addressId: bookingData.addressId || "00000000-0000-0000-0000-000000000000",
       serviceId: "00000000-0000-0000-0000-000000000000",
       detailsJson: JSON.stringify(bookingData),
       scheduledDate: new Date(`${bookingData.date}T${bookingData.time}`).toISOString(),
@@ -162,10 +164,13 @@ export default function BookCleaning() {
     );
   }
 
+  const isBuildingCleaning = bookingData.serviceType === "Building Cleaning";
+  const isResidential = ["Deep Cleaning", "Move In/Out", "Post Construction"].includes(bookingData.serviceType);
+  const isOffice = bookingData.serviceType === "Office Cleaning";
+
   return (
     <div className="book-container">
       <div className="book-layout">
-        
         <div className="book-content">
           <div className="book-card">
             <div className="step-indicator">Step {step} of 3</div>
@@ -177,63 +182,141 @@ export default function BookCleaning() {
                 <div className="input-box">
                   <label>Service Type</label>
                   <select className="modern-select" value={bookingData.serviceType} onChange={e => updateField('serviceType', e.target.value)}>
+                    <option>Deep Cleaning</option>
+                    <option>Move In/Out</option>
+                    <option>Post Construction</option>
+                    <option>Office Cleaning</option>
                     <option>Building Cleaning</option>
-                    <option>Residential Cleaning</option>
-                    <option>Commercial Office</option>
                   </select>
                 </div>
 
+                {!isBuildingCleaning && (
+                  <div className="input-box">
+                    <label>Property Size (SQ FT)</label>
+                    <select className="modern-select" value={bookingData.sqFtRangeIndex} onChange={e => updateField('sqFtRangeIndex', parseInt(e.target.value))}>
+                      {SQ_FT_RANGES.map((range, index) => (
+                        <option key={index} value={index}>{range} SQ FT</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
                 <div className="grid-2">
-                  <div className="input-box">
-                    <label>Sidewalk (1 credit/unit)</label>
-                    <select className="modern-select" value={bookingData.sidewalk} onChange={e => updateField('sidewalk', parseInt(e.target.value))}>
-                      {[0,1,2,3,4,5].map(n => <option key={n} value={n}>{n}</option>)}
-                    </select>
-                  </div>
-                  <div className="input-box">
-                    <label>Lobby (1 credit/unit)</label>
-                    <select className="modern-select" value={bookingData.lobby} onChange={e => updateField('lobby', parseInt(e.target.value))}>
-                      {[0,1,2,3,4,5].map(n => <option key={n} value={n}>{n}</option>)}
-                    </select>
-                  </div>
-                  <div className="input-box">
-                    <label>Hallways (1 credit/unit)</label>
-                    <select className="modern-select" value={bookingData.hallways} onChange={e => updateField('hallways', parseInt(e.target.value))}>
-                      {[0,1,2,3,4,5].map(n => <option key={n} value={n}>{n}</option>)}
-                    </select>
-                  </div>
-                  <div className="input-box">
-                    <label>Building Bathroom (1 credit/unit)</label>
-                    <select className="modern-select" value={bookingData.bathrooms} onChange={e => updateField('bathrooms', parseInt(e.target.value))}>
-                      {[0,1,2,3,4,5].map(n => <option key={n} value={n}>{n}</option>)}
-                    </select>
-                  </div>
-                  <div className="input-box">
-                    <label>Internal Staircase (1 credit/unit)</label>
-                    <select className="modern-select" value={bookingData.internalStaircase} onChange={e => updateField('internalStaircase', parseInt(e.target.value))}>
-                      {[0,1,2,3,4,5].map(n => <option key={n} value={n}>{n}</option>)}
-                    </select>
-                  </div>
-                  <div className="input-box">
-                    <label>External Staircase (1 credit/unit)</label>
-                    <select className="modern-select" value={bookingData.externalStaircase} onChange={e => updateField('externalStaircase', parseInt(e.target.value))}>
-                      {[0,1,2,3,4,5].map(n => <option key={n} value={n}>{n}</option>)}
-                    </select>
-                  </div>
-                  <div className="input-box">
-                    <label>Laundry Room (1 credit/unit)</label>
-                    <select className="modern-select" value={bookingData.laundryRoom} onChange={e => updateField('laundryRoom', parseInt(e.target.value))}>
-                      {[0,1,2,3,4,5].map(n => <option key={n} value={n}>{n}</option>)}
-                    </select>
-                  </div>
+                  {/* Residential Specific Add-ons */}
+                  {isResidential && (
+                    <>
+                      <div className="input-box">
+                        <label>Bedrooms (+{ADDON_PRICES.bedrooms} credits)</label>
+                        <select className="modern-select" value={bookingData.bedrooms} onChange={e => updateField('bedrooms', parseInt(e.target.value))}>
+                          {[0,1,2,3,4,5,6,7,8,9,10].map(n => <option key={n} value={n}>{n}</option>)}
+                        </select>
+                      </div>
+                      <div className="input-box">
+                        <label>Full Bathrooms (+{ADDON_PRICES.fullBathrooms} credits)</label>
+                        <select className="modern-select" value={bookingData.fullBathrooms} onChange={e => updateField('fullBathrooms', parseInt(e.target.value))}>
+                          {[0,1,2,3,4,5,6,7,8,9,10].map(n => <option key={n} value={n}>{n}</option>)}
+                        </select>
+                      </div>
+                      <div className="input-box">
+                        <label>Half Bathrooms (+{ADDON_PRICES.halfBathrooms} credits)</label>
+                        <select className="modern-select" value={bookingData.halfBathrooms} onChange={e => updateField('halfBathrooms', parseInt(e.target.value))}>
+                          {[0,1,2,3,4,5,6,7,8,9,10].map(n => <option key={n} value={n}>{n}</option>)}
+                        </select>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Office Specific Add-ons */}
+                  {isOffice && (
+                    <>
+                      <div className="input-box">
+                        <label>Full Bathrooms (+{ADDON_PRICES.fullBathrooms} credits)</label>
+                        <select className="modern-select" value={bookingData.fullBathrooms} onChange={e => updateField('fullBathrooms', parseInt(e.target.value))}>
+                          {[0,1,2,3,4,5,6,7].map(n => <option key={n} value={n}>{n}</option>)}
+                        </select>
+                      </div>
+                      <div className="input-box">
+                        <label>Half Bathrooms (+{ADDON_PRICES.halfBathrooms} credits)</label>
+                        <select className="modern-select" value={bookingData.halfBathrooms} onChange={e => updateField('halfBathrooms', parseInt(e.target.value))}>
+                          {[0,1,2,3,4,5,6,7].map(n => <option key={n} value={n}>{n}</option>)}
+                        </select>
+                      </div>
+                      <div className="input-box">
+                        <label>Kitchens (+{ADDON_PRICES.kitchens} credits)</label>
+                        <select className="modern-select" value={bookingData.kitchens} onChange={e => updateField('kitchens', parseInt(e.target.value))}>
+                          {[0,1,2,3,4,5].map(n => <option key={n} value={n}>{n}</option>)}
+                        </select>
+                      </div>
+                      <div className="input-box">
+                        <label>Hallways (+{ADDON_PRICES.hallways} credits)</label>
+                        <select className="modern-select" value={bookingData.hallways} onChange={e => updateField('hallways', parseInt(e.target.value))}>
+                          {[0,1,2,3,4,5].map(n => <option key={n} value={n}>{n}</option>)}
+                        </select>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Building Cleaning Specific Add-ons */}
+                  {isBuildingCleaning && (
+                    <>
+                      <div className="input-box">
+                        <label>Sidewalk Sweeping (+{ADDON_PRICES.sidewalk} cr)</label>
+                        <select className="modern-select" value={bookingData.sidewalk} onChange={e => updateField('sidewalk', parseInt(e.target.value))}>
+                          {[0,1,2,3,4,5,6,7,8,9,10].map(n => <option key={n} value={n}>{n}</option>)}
+                        </select>
+                      </div>
+                      <div className="input-box">
+                        <label>Full Bathrooms (+{ADDON_PRICES.fullBathrooms} cr)</label>
+                        <select className="modern-select" value={bookingData.fullBathrooms} onChange={e => updateField('fullBathrooms', parseInt(e.target.value))}>
+                          {[0,1,2,3,4,5,6,7].map(n => <option key={n} value={n}>{n}</option>)}
+                        </select>
+                      </div>
+                      <div className="input-box">
+                        <label>Half Bathrooms (+{ADDON_PRICES.halfBathrooms} cr)</label>
+                        <select className="modern-select" value={bookingData.halfBathrooms} onChange={e => updateField('halfBathrooms', parseInt(e.target.value))}>
+                          {[0,1,2,3,4,5,6,7].map(n => <option key={n} value={n}>{n}</option>)}
+                        </select>
+                      </div>
+                      <div className="input-box">
+                        <label>Hallways (+{ADDON_PRICES.hallways} cr)</label>
+                        <select className="modern-select" value={bookingData.hallways} onChange={e => updateField('hallways', parseInt(e.target.value))}>
+                          {[0,1,2,3,4,5].map(n => <option key={n} value={n}>{n}</option>)}
+                        </select>
+                      </div>
+                      <div className="input-box">
+                        <label>Staircases (Flights) (+{ADDON_PRICES.staircases} cr)</label>
+                        <select className="modern-select" value={bookingData.staircases} onChange={e => updateField('staircases', parseInt(e.target.value))}>
+                          {[0,1,2,3,4,5,6,7,8,9,10].map(n => <option key={n} value={n}>{n}</option>)}
+                        </select>
+                      </div>
+                      <div className="input-box">
+                        <label>Lobby (+{ADDON_PRICES.lobby} cr)</label>
+                        <select className="modern-select" value={bookingData.lobby} onChange={e => updateField('lobby', parseInt(e.target.value))}>
+                          {[0,1,2,3].map(n => <option key={n} value={n}>{n}</option>)}
+                        </select>
+                      </div>
+                      <div className="input-box">
+                        <label>Laundry Room (+{ADDON_PRICES.laundryRoom} cr)</label>
+                        <select className="modern-select" value={bookingData.laundryRoom} onChange={e => updateField('laundryRoom', parseInt(e.target.value))}>
+                          {[0,1,2,3].map(n => <option key={n} value={n}>{n}</option>)}
+                        </select>
+                      </div>
+                      <div className="input-box">
+                        <label>External Staircases (+{ADDON_PRICES.externalStaircase} cr)</label>
+                        <select className="modern-select" value={bookingData.externalStaircase} onChange={e => updateField('externalStaircase', parseInt(e.target.value))}>
+                          {[0,1,2,3].map(n => <option key={n} value={n}>{n}</option>)}
+                        </select>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <div className="input-box">
                   <label>Dirt Level <span style={{color: 'red'}}>*</span></label>
                   <select className="modern-select" value={bookingData.dirtLevel} onChange={e => updateField('dirtLevel', e.target.value)}>
-                    <option>Standard</option>
-                    <option>Deep Clean</option>
-                    <option>Post-Construction</option>
+                    {DIRT_LEVELS.map(dl => (
+                      <option key={dl.label} value={dl.label}>{dl.label}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -246,23 +329,51 @@ export default function BookCleaning() {
             {step === 2 && (
               <div className="step-content">
                 <h2>Where do you need us?</h2>
+                
+                {user?.addresses && user.addresses.length > 0 && (
+                  <div className="saved-addresses" style={{ marginBottom: '24px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>Saved Addresses</label>
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                      {user.addresses.map((addr: any) => (
+                        <div 
+                          key={addr.id}
+                          onClick={() => {
+                            const fullAddr = `${addr.street}, ${addr.city}, ${addr.state} ${addr.zipCode}`;
+                            setBookingData(prev => ({ ...prev, address: fullAddr, addressId: addr.id }));
+                          }}
+                          style={{
+                            padding: '12px 16px',
+                            border: bookingData.addressId === addr.id ? '2px solid var(--primary-color)' : '1px solid var(--border-color)',
+                            borderRadius: '12px',
+                            cursor: 'pointer',
+                            background: bookingData.addressId === addr.id ? '#eff6ff' : 'white',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}
+                        >
+                          <span style={{ fontSize: '1.2rem' }}>{addr.isDefault ? '🏠' : '📍'}</span>
+                          <div>
+                            <div style={{ fontWeight: '600', fontSize: '0.9rem' }}>{addr.street}</div>
+                            <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{addr.city}, {addr.state}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="input-box">
-                  <label>Service Address (California Only)</label>
-                  <input 
-                    type="text" 
-                    className="modern-input"
-                    placeholder="e.g. 123 Main St, Los Angeles, CA 90001" 
-                    value={bookingData.address}
-                    onChange={e => updateField('address', e.target.value)}
+                  <label>Search Address (California Only)</label>
+                  <MapSearch 
+                    value={bookingData.address} 
+                    onChange={(address) => {
+                      setBookingData(prev => ({ ...prev, address: address, addressId: "" }));
+                    }} 
                   />
                 </div>
-                {/* Mock Map View inspired by Hotels app */}
-                <div className="map-placeholder">
-                  <div className="map-pin">📍</div>
-                  <p>Mapbox / Google Maps Integration goes here</p>
-                </div>
                 
-                <div className="btn-row">
+                <div className="btn-row" style={{ marginTop: '24px' }}>
                   <button className="btn-secondary" onClick={handlePrev}>Back</button>
                   <button className="btn-primary" onClick={handleNext}>Continue to Schedule</button>
                 </div>
@@ -308,20 +419,7 @@ export default function BookCleaning() {
                 
                 <div className="payment-summary">
                   <h3>Payment</h3>
-                  <div className="payment-row">
-                    <span>{bookingData.serviceType} Base</span>
-                    <span>1 Credit</span>
-                  </div>
-                  {bookingData.sidewalk > 0 && <div className="payment-row"><span>Sidewalk ({bookingData.sidewalk})</span><span>{bookingData.sidewalk} Credits</span></div>}
-                  {bookingData.lobby > 0 && <div className="payment-row"><span>Lobby ({bookingData.lobby})</span><span>{bookingData.lobby} Credits</span></div>}
-                  {bookingData.hallways > 0 && <div className="payment-row"><span>Hallways ({bookingData.hallways})</span><span>{bookingData.hallways} Credits</span></div>}
-                  {bookingData.bathrooms > 0 && <div className="payment-row"><span>Bathrooms ({bookingData.bathrooms})</span><span>{bookingData.bathrooms} Credits</span></div>}
-                  {bookingData.internalStaircase > 0 && <div className="payment-row"><span>Internal Staircase ({bookingData.internalStaircase})</span><span>{bookingData.internalStaircase} Credits</span></div>}
-                  {bookingData.externalStaircase > 0 && <div className="payment-row"><span>External Staircase ({bookingData.externalStaircase})</span><span>{bookingData.externalStaircase} Credits</span></div>}
-                  {bookingData.laundryRoom > 0 && <div className="payment-row"><span>Laundry Room ({bookingData.laundryRoom})</span><span>{bookingData.laundryRoom} Credits</span></div>}
-                  {bookingData.dirtLevel !== "Standard" && <div className="payment-row"><span>{bookingData.dirtLevel} Add-on</span><span>{bookingData.dirtLevel === "Deep Clean" ? 2 : 5} Credits</span></div>}
-
-                  <div className="payment-row total">
+                  <div className="payment-row total" style={{ borderTop: 'none', paddingTop: '0' }}>
                     <span>Total Due</span>
                     <span>{totalCredits} {totalCredits === 1 ? 'Credit' : 'Credits'}</span>
                   </div>
@@ -330,7 +428,18 @@ export default function BookCleaning() {
                   </div>
                 </div>
 
-                {errorMsg && <div style={{ color: 'red', marginTop: '12px', textAlign: 'center', fontWeight: 'bold' }}>{errorMsg}</div>}
+                {errorMsg && (
+                  <div style={{ background: '#fee2e2', color: '#b91c1c', padding: '12px', borderRadius: '8px', marginTop: '12px', textAlign: 'center', fontSize: '0.95rem' }}>
+                    <strong>{errorMsg}</strong>
+                    {errorMsg.includes("Insufficient balance") && (
+                      <div style={{ marginTop: '8px' }}>
+                        <Link href={`/credits?missing=${totalCredits - (user?.creditBalance || 0)}`} className="btn-primary" style={{ padding: '8px 16px', fontSize: '0.9rem', display: 'inline-block' }}>
+                          Buy {totalCredits - (user?.creditBalance || 0)} Credits
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="btn-row" style={{ marginTop: '16px' }}>
                   <button className="btn-secondary" onClick={handlePrev}>Back</button>
@@ -350,6 +459,7 @@ export default function BookCleaning() {
             <div className="summary-details">
               <h3>{bookingData.serviceType}</h3>
               <p>Dirt Level: {bookingData.dirtLevel}</p>
+              {!isBuildingCleaning && <p>Size: {SQ_FT_RANGES[bookingData.sqFtRangeIndex]} SQ FT</p>}
               
               <hr style={{ borderColor: 'var(--border-color)', margin: '16px 0' }} />
               
