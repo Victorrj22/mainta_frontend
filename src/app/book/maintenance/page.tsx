@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import "../book.css";
 
 export default function BookMaintenance() {
+  const router = useRouter();
   const [step, setStep] = useState(1);
   const [bookingData, setBookingData] = useState({
     issueType: "Plumbing",
@@ -22,9 +24,17 @@ export default function BookMaintenance() {
 
   useEffect(() => {
     const userStr = localStorage.getItem("mainta_user");
-    if (userStr) {
-      const userObj = JSON.parse(userStr);
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/${userObj.id}`)
+    if (!userStr) {
+      router.push("/auth/login");
+      return;
+    }
+    const userObj = JSON.parse(userStr);
+    if (!userObj.id) {
+      localStorage.removeItem("mainta_user");
+      router.push("/auth/login");
+      return;
+    }
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/${userObj.id}`)
         .then(res => res.json())
         .then(data => {
           setUser(data);
@@ -37,8 +47,7 @@ export default function BookMaintenance() {
           }));
         })
         .catch(err => console.error("Failed to load user", err));
-    }
-  }, []);
+  }, [router]);
 
   const handleNext = () => setStep(step + 1);
   const handlePrev = () => setStep(step - 1);

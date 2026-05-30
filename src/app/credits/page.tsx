@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import "./credits.css";
 
 const packages = [
@@ -13,6 +13,7 @@ const packages = [
 
 function CreditsContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const missing = searchParams.get('missing');
   const successParam = searchParams.get('success');
   
@@ -22,6 +23,18 @@ function CreditsContent() {
 
   // Clear success param and fetch updated balance on mount
   useEffect(() => {
+    const userStr = localStorage.getItem("mainta_user");
+    if (!userStr) {
+      router.push("/auth/login");
+      return;
+    }
+    const userObj = JSON.parse(userStr);
+    if (!userObj.id) {
+      localStorage.removeItem("mainta_user");
+      router.push("/auth/login");
+      return;
+    }
+
     if (successParam === 'true') {
       const userStr = localStorage.getItem("mainta_user");
       if (userStr) {

@@ -35,7 +35,6 @@ export default function Home() {
           <div className="services-grid">
             <Link href="/book/cleaning" className="service-card">
               <div className="service-image-container">
-                <span className="credit-badge">1 Credit</span>
                 <img src="/cleaning.png" alt="Cleaning Service" />
               </div>
               <div className="service-content">
@@ -47,7 +46,6 @@ export default function Home() {
 
             <Link href="/book/maintenance" className="service-card">
               <div className="service-image-container">
-                <span className="credit-badge">1 Credit</span>
                 <img src="/maintenance.png" alt="Maintenance Service" />
               </div>
               <div className="service-content">
